@@ -1,1 +1,43 @@
+name: Build OAI-PMH dataset
 
+on:
+  schedule:
+    - cron: "0 4 * * 1"   # weekly, Mondays at 04:00 UTC
+  workflow_dispatch:        # also lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate dataset
+        env:
+          GHOST_API_URL: ${{ secrets.GHOST_API_URL }}
+          GHOST_CONTENT_API_KEY: ${{ secrets.GHOST_CONTENT_API_KEY }}
+        run: python generator/build_oai_dataset.py data/oai-dataset.json
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/oai-dataset.json
+          if git diff --staged --quiet; then
+            echo "No changes."
+          else
+            git commit -m "chore: refresh OAI-PMH dataset [skip ci]"
+            git push
+          fi
+
+      # Refresh the jsDelivr cache so the Worker sees new data promptly.
+      # If you name the repo differently, change Jon-tplegacy/tplegacy-oai below.
+      - name: Purge jsDelivr cache
+        run: |
+          curl -s "https://purge.jsdelivr.net/gh/Jon-tplegacy/tplegacy-oai@main/data/oai-dataset.json" || true
