@@ -1,0 +1,11 @@
+name = "tplegacy-oai"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+
+# No routes block is needed. Deploying with `wrangler deploy` automatically
+# serves the worker at  https://tplegacy-oai.<your-subdomain>.workers.dev
+# and prints the exact URL at the end of the deploy.
+#
+# (If you ever move to a custom subdomain later, you'd add:
+#   routes = [ { pattern = "oai.tplegacy.net", custom_domain = true } ]
+# but that requires the domain to be on Cloudflare, which it isn't — so skip it.)
