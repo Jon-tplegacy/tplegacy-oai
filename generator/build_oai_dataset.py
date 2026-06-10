@@ -36,11 +36,14 @@ ARK_NAAN = "68749"
 # Rights statement emitted as dc:rights. Set to "" to omit.
 RIGHTS = "Non-commercial volunteer archive. Educational and research use."
 
-# primary-tag slug -> (dc:type value, human-readable set name)
-TYPE_MAP = {
-    "sermons": ("Sermon", "Sermons"),
-    "prayers": ("Prayer", "Prayers"),
-    "books":   ("Book",   "Books"),
+# Detect type + set from a keyword in the tag NAME (case-insensitive).
+# keyword (lowercase) -> (dc:type value, setSpec, setName)
+# This is robust to however the tag slugs are named, and handles tags like
+# "1950s Sermons" or "Prayer for Resurrection".
+NAME_TYPE_MAP = {
+    "sermon": ("Sermon", "sermons", "Sermons"),
+    "prayer": ("Prayer", "prayers", "Prayers"),
+    "book":   ("Book",   "books",   "Books"),
 }
 
 # tag slug prefix that encodes language, e.g. "lang-en" -> "en"
@@ -53,8 +56,7 @@ CREATOR_MAP = {
     "author-hak-ja-han-moon": "Hak Ja Han Moon",
 }
 
-# tags that must NOT surface as dc:subject (structural tags)
-STRUCTURAL_TAG_SLUGS = set(TYPE_MAP.keys())
+# tag slug prefixes that must NOT surface as dc:subject (structural tags)
 STRUCTURAL_TAG_PREFIXES = (LANG_PREFIX, "author-")
 
 PAGE_LIMIT = 100                  # Ghost API page size while harvesting
@@ -114,14 +116,17 @@ def fetch_all_posts():
 def map_record(post):
     tags = post.get("tags") or []
     slugs = [t.get("slug", "") for t in tags]
+    names = [t.get("name", "") for t in tags]
 
+    # Type + set, detected from tag names (first match wins for dc:type).
     dc_type, sets = None, []
-    for slug in slugs:
-        if slug in TYPE_MAP:
-            type_value, _ = TYPE_MAP[slug]
-            if dc_type is None:
-                dc_type = type_value
-            sets.append(slug)
+    for name in names:
+        low = name.lower()
+        for keyword, (type_value, set_spec, _set_name) in NAME_TYPE_MAP.items():
+            if keyword in low and set_spec not in sets:
+                if dc_type is None:
+                    dc_type = type_value
+                sets.append(set_spec)
 
     creators = [CREATOR_MAP[s] for s in slugs if s in CREATOR_MAP]
     if not creators:
@@ -138,8 +143,6 @@ def map_record(post):
     subjects = []
     for t in tags:
         slug = t.get("slug", "")
-        if slug in STRUCTURAL_TAG_SLUGS:
-            continue
         if any(slug.startswith(p) for p in STRUCTURAL_TAG_PREFIXES):
             continue
         if t.get("name"):
@@ -183,7 +186,7 @@ def main():
     records = [r for r in records if r["datestamp"]]  # drop anything without a usable datestamp
 
     earliest = min((r["datestamp"] for r in records), default="1970-01-01T00:00:00Z")
-    sets = [{"spec": slug, "name": name} for slug, (_, name) in TYPE_MAP.items()]
+    sets = [{"spec": spec, "name": set_name} for (_type, spec, set_name) in NAME_TYPE_MAP.values()]
 
     dataset = {
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
