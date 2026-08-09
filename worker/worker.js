@@ -9,7 +9,7 @@ const DATA_URL    = "https://cdn.jsdelivr.net/gh/Jon-tplegacy/tplegacy-oai@main/
 //           <subdomain> part here (the worker name is set in wrangler.toml).
 const BASE_URL    = "https://tplegacy-oai.<your-subdomain>.workers.dev/oai";
 const REPO_NAME   = "The Principle Legacy Archive";
-const ADMIN_EMAIL = "andregi2007@gmail.com";
+const ADMIN_EMAIL = "admin@tplegacy.net";
 // --------------------------------------------------------------------------
 
 const REPO_NS     = "tplegacy.net";
